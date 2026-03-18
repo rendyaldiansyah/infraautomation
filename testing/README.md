@@ -1,39 +1,52 @@
 # Testing Scripts — LKS 2026
 
-Dua script otomatis: satu untuk siswa (self-check), satu untuk juri (penilaian).
+## Alur Penggunaan
 
-## Setup
-
-```bash
-chmod +x testing/student-check.sh testing/jury-assess.sh
 ```
-
-Prasyarat: `aws` CLI aktif, `jq`, `curl`, `terraform init` sudah dijalankan.
+1. push-to-github.sh          ← Push kode ke GitHub (dari VSCode/terminal)
+         │
+         ▼
+2. jury-deploy.sh             ← Juri deploy sendiri untuk verifikasi soal
+         │
+         ▼
+3. jury-assess.sh             ← Juri nilai hasil deploy siswa
+         │
+         ▼
+4. student-check.sh           ← Siswa self-check sebelum panggil juri
+         │
+         ▼
+5. jury-teardown.sh           ← Juri bersihkan resource setelah selesai
+```
 
 ---
 
-## student-check.sh — Untuk Siswa
+## Scripts
 
-Jalankan sebelum memanggil juri. Semua bagian harus PASS.
-
-```bash
-./testing/student-check.sh
-```
-
-Checks: Credentials · Terraform outputs · VPC · Peering · ECR · ECS · ALB + CRUD · Prometheus · CI/CD
+| Script | Untuk | Fungsi |
+|---|---|---|
+| `../push-to-github.sh` | Semua | Push kode dari lokal ke GitHub |
+| `jury-deploy.sh` | Juri | Deploy seluruh infrastruktur dari nol (proof of concept) |
+| `jury-assess.sh <nama>` | Juri | Nilai hasil deploy siswa, skor 0–130 |
+| `student-check.sh` | Siswa | Self-check sebelum panggil juri |
+| `jury-teardown.sh` | Juri | Hapus semua resource AWS setelah testing |
 
 ---
 
-## jury-assess.sh — Untuk Juri
+## Setup awal (dari VSCode, jalankan sekali)
 
 ```bash
-./testing/jury-assess.sh "Nama Lengkap Siswa"
+chmod +x push-to-github.sh testing/*.sh
+./push-to-github.sh
 ```
+
+---
+
+## Skor penilaian juri
 
 | Section | Topik | Maks |
 |---|---|---|
-| A | Networking & VPC | 30 |
-| B | Security Groups | 10 |
+| A | Networking & VPC (+ Peering routes) | 30 |
+| B | Security Groups (incl. TCP 9100) | 10 |
 | C | Database (RDS, DynamoDB, SSM) | 10 |
 | D | ECR Repositories | 5 |
 | E | ECS Application Services | 20 |
