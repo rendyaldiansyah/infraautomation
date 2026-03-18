@@ -18,4 +18,4 @@ monitoring_availability_zones = ["us-west-2a", "us-west-2b"]
 # Database
 db_name       = "lksdb"
 db_username   = "lksadmin"
-db_password   = "LKS@Secure2026!"
+db_password   = "LKSSecure2026!"

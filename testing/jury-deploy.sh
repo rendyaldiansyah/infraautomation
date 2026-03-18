@@ -184,7 +184,7 @@ monitoring_subnet_cidrs       = ["10.1.1.0/24", "10.1.2.0/24"]
 monitoring_availability_zones = ["us-west-2a", "us-west-2b"]
 db_name           = "lksdb"
 db_username       = "lksadmin"
-db_password       = "LKS@Secure2026!"
+db_password       = "LKSSecure2026!"
 TFVARS
 ok "terraform.tfvars dibuat"
 
@@ -316,7 +316,7 @@ API_TD=$(aws ecs register-task-definition \
       {\"name\": \"DB_PORT\",      \"value\": \"5432\"},
       {\"name\": \"DB_NAME\",      \"value\": \"lksdb\"},
       {\"name\": \"DB_USER\",      \"value\": \"lksadmin\"},
-      {\"name\": \"DB_PASSWORD\",  \"value\": \"LKS@Secure2026!\"},
+      {\"name\": \"DB_PASSWORD\",  \"value\": \"LKSSecure2026!\"},
       {\"name\": \"AWS_REGION\",   \"value\": \"us-east-1\"},
       {\"name\": \"NODE_ENV\",     \"value\": \"production\"}
     ],

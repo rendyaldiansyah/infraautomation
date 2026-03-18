@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_DB:       lksdb
       POSTGRES_USER:     lksadmin
-      POSTGRES_PASSWORD: LKS@Secure2026!
+      POSTGRES_PASSWORD: LKSSecure2026!
     ports:
       - "5432:5432"
     volumes:
@@ -36,7 +36,7 @@ services:
       DB_PORT:      5432
       DB_NAME:      lksdb
       DB_USER:      lksadmin
-      DB_PASSWORD:  LKS@Secure2026!
+      DB_PASSWORD:  LKSSecure2026!
       AWS_REGION:   us-east-1
       CORS_ORIGIN:  "http://localhost:3000"
     depends_on:

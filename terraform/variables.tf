@@ -85,7 +85,7 @@ variable "db_username" {
 variable "db_password" {
   type      = string
   sensitive = true
-  default   = "LKS@Secure2026!"
+  default   = "LKSSecure2026!"
 }
 
 variable "db_instance_class" {
