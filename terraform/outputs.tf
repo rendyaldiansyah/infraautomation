@@ -92,3 +92,8 @@ output "dynamodb_table_name" {
   description = "DynamoDB sessions table name"
   value       = module.database.dynamodb_table_name
 }
+
+output "sg_monitoring_oregon_id" {
+  description = "Monitoring Security Group ID (us-west-2 Oregon) — use for Prometheus ECS service"
+  value       = module.monitoring_vpc.sg_monitoring_id
+}

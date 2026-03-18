@@ -6,7 +6,6 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // In dev, proxy API calls to local backend so you don't need CORS config
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,

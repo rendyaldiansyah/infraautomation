@@ -216,7 +216,7 @@ ok "terraform apply selesai"
 VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
 ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || echo "")
 SG_ECS=$(terraform output -raw sg_ecs_id 2>/dev/null || echo "")
-SG_MON=$(terraform output -raw sg_monitoring_id 2>/dev/null || echo "")
+SG_MON=$(terraform output -raw sg_monitoring_oregon_id 2>/dev/null || echo "")
 PRIVATE_SUBNETS=$(terraform output -json private_subnet_ids 2>/dev/null | jq -r '.[]' | head -1 || echo "")
 MON_SUBNETS=$(terraform output -json monitoring_subnet_ids 2>/dev/null | jq -r '.[]' | head -1 || echo "")
 PEERING_STATUS=$(terraform output -raw peering_connection_status 2>/dev/null || echo "")
