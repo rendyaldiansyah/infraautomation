@@ -281,10 +281,21 @@ if [ -n "$SG_ECS" ]; then
       --cidr "10.1.0.0/16" \
       --region us-east-1 2>/dev/null \
       && ok "TCP 9100 rule ditambahkan ke lks-sg-ecs" \
-      || warn "Gagal tambah rule — cek manual di Console"
+      || { warn "Rule mungkin sudah ada dengan ID berbeda — cek di Console:"; 
+           warn "EC2 -> Security Groups -> lks-sg-ecs -> Inbound rules -> TCP 9100 dari 10.1.0.0/16"; }
   else
-    ok "lks-sg-ecs: TCP 9100 dari 10.1.0.0/16 sudah ada"
+    ok "lks-sg-ecs: TCP 9100 dari 10.1.0.0/16 sudah ada ($RULE_EXISTS rule)"
   fi
+  
+  # Double-check after addition
+  RULE_VERIFY=$(aws ec2 describe-security-groups \
+    --group-ids "$SG_ECS" \
+    --query "SecurityGroups[0].IpPermissions[?FromPort==\`9100\`].IpRanges[?CidrIp=='10.1.0.0/16'] | length(@)" \
+    --output text --region us-east-1 2>/dev/null || echo "0")
+  [ "${RULE_VERIFY:-0}" -gt 0 ] \
+    && ok "Verified: TCP 9100 rule confirmed in lks-sg-ecs" \
+    || warn "TCP 9100 rule masih tidak terdeteksi — tambahkan MANUAL di AWS Console"
+  
 fi
 
 # Read outputs
@@ -468,7 +479,7 @@ ok "ECS Service lks-api-service: dibuat/diupdate"
 # ── Step 7: Tunggu ECS healthy ───────────────────────────────
 step "7" "Tunggu ECS Services Healthy"
 
-log "Tunggu lks-api-service healthy (maks 5 menit)..."
+log "Tunggu lks-api-service running (maks 5 menit)..."
 for i in $(seq 1 30); do
   RUNNING=$(aws ecs describe-services \
     --cluster lks-ecs-cluster --services lks-api-service \
@@ -477,12 +488,12 @@ for i in $(seq 1 30); do
     ok "lks-api-service running ($RUNNING tasks)"
     break
   fi
-  log "Menunggu... ($i/30) running=$RUNNING"
+  log "Menunggu ECS API... ($i/30) running=$RUNNING"
   sleep 10
 done
 
-log "Tunggu lks-fe-service healthy..."
-for i in $(seq 1 30); do
+log "Tunggu lks-fe-service running..."
+for i in $(seq 1 20); do
   RUNNING=$(aws ecs describe-services \
     --cluster lks-ecs-cluster --services lks-fe-service \
     --query 'services[0].runningCount' --output text --region us-east-1 2>/dev/null || echo 0)
@@ -490,7 +501,25 @@ for i in $(seq 1 30); do
     ok "lks-fe-service running ($RUNNING tasks)"
     break
   fi
-  log "Menunggu... ($i/30) running=$RUNNING"
+  log "Menunggu ECS FE... ($i/20) running=$RUNNING"
+  sleep 10
+done
+
+log "Tunggu ALB target groups healthy (maks 3 menit)..."
+for i in $(seq 1 18); do
+  API_HEALTHY=$(aws elbv2 describe-target-health \
+    --target-group-arn "$TG_API" \
+    --query 'TargetHealthDescriptions[?TargetHealth.State==`healthy`] | length(@)' \
+    --output text --region us-east-1 2>/dev/null || echo 0)
+  FE_HEALTHY=$(aws elbv2 describe-target-health \
+    --target-group-arn "$TG_FE" \
+    --query 'TargetHealthDescriptions[?TargetHealth.State==`healthy`] | length(@)' \
+    --output text --region us-east-1 2>/dev/null || echo 0)
+  if [ "${API_HEALTHY:-0}" -gt 0 ] && [ "${FE_HEALTHY:-0}" -gt 0 ]; then
+    ok "ALB Target Groups healthy: API=$API_HEALTHY FE=$FE_HEALTHY"
+    break
+  fi
+  log "Menunggu ALB healthy... ($i/18) API=$API_HEALTHY FE=$FE_HEALTHY"
   sleep 10
 done
 
@@ -618,6 +647,7 @@ else
     --task-definition lks-prometheus-task \
     --desired-count 1 \
     --launch-type FARGATE \
+    --enable-execute-command \
     --network-configuration "awsvpcConfiguration={
       subnets=[$ALL_MON_SUBNETS],
       securityGroups=[$SG_MON],
@@ -657,17 +687,32 @@ if [ -n "$PTASK" ] && [ "$PTASK" != "None" ]; then
 fi
 
 # Wait for ALB to be ready
-log "Tunggu ALB health check (maks 3 menit)..."
-for i in $(seq 1 18); do
-  HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+log "Tunggu ALB health check (maks 10 menit — ECS perlu waktu untuk register)..."
+ALB_OK=false
+for i in $(seq 1 60); do
+  HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 \
     "http://$ALB_DNS/api/health" 2>/dev/null || echo "000")
   if [ "$HTTP" = "200" ]; then
     ok "ALB → /api/health: HTTP 200"
+    ALB_OK=true
     break
   fi
-  log "Menunggu ALB... ($i/18) HTTP=$HTTP"
+  # Show target health every 5 checks
+  if [ $((i % 5)) -eq 0 ] && [ -n "$TG_API" ]; then
+    TG_STATE=$(aws elbv2 describe-target-health \
+      --target-group-arn "$TG_API" \
+      --query 'TargetHealthDescriptions[*].TargetHealth.State' \
+      --output text --region us-east-1 2>/dev/null || echo "unknown")
+    log "  Target states: $TG_STATE | HTTP=$HTTP ($i/60)"
+  else
+    log "Menunggu ALB... ($i/60) HTTP=$HTTP"
+  fi
   sleep 10
 done
+if [ "$ALB_OK" = "false" ]; then
+  warn "ALB belum healthy setelah 10 menit — cek ECS task logs di CloudWatch"
+  warn "Kemungkinan: DB connection SSL issue atau task masih initializing"
+fi
 
 # ── Step 11: Run assessment ───────────────────────────────────
 step "11" "Jalankan Jury Assessment"

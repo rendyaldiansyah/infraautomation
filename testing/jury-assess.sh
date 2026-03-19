@@ -295,16 +295,26 @@ for SVC in lks-fe-service lks-api-service; do
     --query 'services[0].status' --output text --region us-east-1 2>/dev/null)
   RC=$(aws ecs describe-services --cluster lks-ecs-cluster --services "$SVC" \
     --query 'services[0].runningCount' --output text --region us-east-1 2>/dev/null || echo 0)
+  # list-tasks is more reliable — runningCount can be stale during deployment
+  TASK_COUNT=$(aws ecs list-tasks \
+    --cluster lks-ecs-cluster --service-name "$SVC" \
+    --desired-status RUNNING \
+    --query 'length(taskArns)' --output text --region us-east-1 2>/dev/null || echo 0)
   TG_ARN=$(aws ecs describe-services --cluster lks-ecs-cluster --services "$SVC" \
     --query 'services[0].loadBalancers[0].targetGroupArn' --output text --region us-east-1 2>/dev/null)
 
-  if [ "$SS" = "ACTIVE" ] && [ "${RC:-0}" -gt 0 ]; then
-    award "E" 4 "$SVC: ACTIVE, $RC task(s) running"
+  if [ "$SS" = "ACTIVE" ] && [ "${TASK_COUNT:-0}" -gt 0 ]; then
+    award "E" 4 "$SVC: ACTIVE, $TASK_COUNT task(s) running (list-tasks)"
+    [ -n "$TG_ARN" ] && [ "$TG_ARN" != "None" ] \
+      && award "E" 2 "$SVC: terhubung ke Target Group" \
+      || no_award "E" 2 "$SVC: tidak terhubung ke Target Group"
+  elif [ "$SS" = "ACTIVE" ] && [ "${RC:-0}" -gt 0 ]; then
+    award "E" 4 "$SVC: ACTIVE, $RC task(s) (describe-services)"
     [ -n "$TG_ARN" ] && [ "$TG_ARN" != "None" ] \
       && award "E" 2 "$SVC: terhubung ke Target Group" \
       || no_award "E" 2 "$SVC: tidak terhubung ke Target Group"
   else
-    no_award "E" 6 "$SVC: tidak running (status=$SS, running=${RC:-0})"
+    no_award "E" 6 "$SVC: tidak running (status=$SS, runningCount=${RC:-0}, taskCount=${TASK_COUNT:-0})"
   fi
 done
 
@@ -336,6 +346,15 @@ section_summary "E" "ECS Application"
 header "F. ALB & Application Functionality" 20 "F"
 
 if [ -n "$ALB_DNS" ]; then
+  # Wait up to 2 minutes for ALB to be ready (targets may still be initializing)
+  log "Menunggu ALB ready..."
+  for _w in $(seq 1 12); do
+    _HC=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+      "http://$ALB_DNS/api/health" 2>/dev/null || echo "000")
+    [ "$_HC" = "200" ] && break
+    sleep 10
+  done
+
   HC=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
     "http://$ALB_DNS/api/health" 2>/dev/null || echo "000")
   [ "$HC" = "200" ] \
@@ -368,7 +387,7 @@ if [ -n "$ALB_DNS" ]; then
     UP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
       -X PUT "http://$ALB_DNS/api/users/$USER_ID" \
       -H "Content-Type: application/json" \
-      -d '{"name":"Updated by Jury","position":"Verified"}' \
+      -d "{\"name\":\"Updated by Jury\",\"email\":\"jury${TS}@lks2026.id\",\"position\":\"Verified\"}" \
       2>/dev/null || echo "000")
     [ "$UP" = "200" ] \
       && award "F" 2 "CRUD Update: PUT /api/users/$USER_ID → 200" \
@@ -385,9 +404,11 @@ if [ -n "$ALB_DNS" ]; then
     DL=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
       -X DELETE "http://$ALB_DNS/api/users/$USER_ID" \
       2>/dev/null || echo "000")
-    [ "$DL" = "200" ] \
-      && award "F" 2 "CRUD Delete: DELETE /api/users/$USER_ID → 200" \
-      || no_award "F" 2 "CRUD Delete: $DL"
+    if [ "$DL" = "200" ] || [ "$DL" = "204" ]; then
+      award "F" 2 "CRUD Delete: DELETE /api/users/$USER_ID → $DL"
+    else
+      no_award "F" 2 "CRUD Delete: $DL (seharusnya 200 atau 204)"
+    fi
 
     # Verify deletion
     GONE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
