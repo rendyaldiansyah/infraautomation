@@ -1,8 +1,4 @@
-# LKS Cloud Computing 2026 — infralks26
-
-National Skills Competition (LKS) — Cloud Computing — District/City Level — 2026
-
-## Project: Microservice Deployment with CI/CD & Inter-Region VPC Peering
+# Project: Microservice Deployment with CI/CD & Inter-Region VPC Peering
 
 ### Multi-Region Architecture
 

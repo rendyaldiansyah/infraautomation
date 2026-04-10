@@ -9,7 +9,26 @@ terraform.tfvars
 # Keep the example file
 !terraform.tfvars.example
 
-terraform/
+# ── Terraform — hanya module Section 3.2-3.5 yang di-upload ─
+# Exclude semua terraform dulu, lalu include yang diperlukan
+terraform/**
+!terraform/
+!terraform/*.tf
+!terraform/*.tfvars.example
+!terraform/TROUBLESHOOTING.md
+!terraform/modules/
+!terraform/modules/vpc/
+!terraform/modules/vpc/**
+!terraform/modules/security/
+!terraform/modules/security/**
+!terraform/modules/alb/
+!terraform/modules/alb/**
+!terraform/modules/database/
+!terraform/modules/database/**
+
+# Answer key — juri only, jangan di-push ke repo peserta
+terraform/answer-key/
+
 testing/
 generate-lockfiles.sh
 infralks26.zip
@@ -58,3 +77,5 @@ venv/
 
 # ── Build outputs ────────────────────────────────────────
 frontend/dist/
+Modul Infrastructure Automation.pdf
+
