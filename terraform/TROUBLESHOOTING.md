@@ -1,8 +1,8 @@
 # Task 2 — Terraform Infrastructure Debugging
 
-Terraform modules sudah disediakan di dalam folder `terraform/modules/`, namun terdapat **bugs yang disengaja** di dalamnya.
+The Terraform modules are provided in the `terraform/modules/` directory, but contain intentional bugs.
 
-Temukan dan perbaiki semua bugs tersebut, kemudian jalankan:
+Find and fix all bugs, then run:
 
 ```bash
 terraform validate
@@ -10,4 +10,4 @@ terraform plan
 terraform apply -auto-approve
 ```
 
-Infrastruktur harus berhasil ter-deploy sepenuhnya sebelum melanjutkan ke task berikutnya.
+The infrastructure must be fully provisioned before proceeding to the next task.

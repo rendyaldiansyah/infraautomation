@@ -1,6 +1,6 @@
 # ── Terraform settings & remote state ──────────────────────
-# JANGAN tambahkan provider block di sini.
-# Semua provider dikonfigurasi di main.tf
+# Do NOT add provider blocks here.
+# All providers are configured in main.tf
 terraform {
   required_version = ">= 1.8.0"
 
