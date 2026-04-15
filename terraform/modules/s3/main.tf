@@ -13,7 +13,10 @@ terraform {
 resource "aws_s3_bucket" "tfstate" {
   bucket        = var.tfstate_bucket_name
   force_destroy = true
-  tags          = { Name = var.tfstate_bucket_name }
+
+  tags = {
+    Name = var.tfstate_bucket_name
+  }
 
   lifecycle {
     ignore_changes = all
@@ -22,7 +25,10 @@ resource "aws_s3_bucket" "tfstate" {
 
 resource "aws_s3_bucket_versioning" "tfstate" {
   bucket = aws_s3_bucket.tfstate.id
-  versioning_configuration { status = "Suspended" }
+
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
@@ -32,13 +38,15 @@ resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
     id     = "expire-old-deployments"
     status = "Enabled"
 
+    filter {}
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
     }
 
     expiration {
-      days = 90
+      days = 365
     }
 
     noncurrent_version_expiration {
@@ -51,7 +59,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
 resource "aws_s3_bucket" "assets" {
   bucket        = var.assets_bucket_name
   force_destroy = true
-  tags          = { Name = var.assets_bucket_name }
+
+  tags = {
+    Name = var.assets_bucket_name
+  }
 
   lifecycle {
     ignore_changes = all
@@ -60,7 +71,10 @@ resource "aws_s3_bucket" "assets" {
 
 resource "aws_s3_bucket_versioning" "assets" {
   bucket = aws_s3_bucket.assets.id
-  versioning_configuration { status = "Enabled" }
+
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "assets" {
@@ -69,6 +83,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "assets" {
   rule {
     id     = "expire-old-assets"
     status = "Disabled"
+
+    filter {}
 
     transition {
       days          = 30
